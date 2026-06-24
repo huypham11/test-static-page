@@ -4,6 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Portfolio</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -333,9 +341,111 @@
       .form-row { grid-template-columns: 1fr; }
       .stats { gap: 2rem; }
     }
+
+    /* CUSTOM CURSOR */
+    * { cursor: none !important; }
+    .cursor-dot {
+      position: fixed;
+      width: 8px; height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: width 0.15s, height 0.15s, background 0.15s;
+    }
+    .cursor-ring {
+      position: fixed;
+      width: 36px; height: 36px;
+      border: 2px solid rgba(108,99,255,0.6);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: width 0.2s, height 0.2s, border-color 0.2s;
+    }
+    .cursor-dot.hovered { width: 14px; height: 14px; background: var(--secondary); }
+    .cursor-ring.hovered { width: 52px; height: 52px; border-color: var(--secondary); }
+
+    /* PARTICLE CANVAS */
+    #particleCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+    }
+
+    /* 3D SECTION */
+    #model3d { padding: 4rem 6% 6rem; text-align: center; }
+    #threeContainer {
+      width: 100%;
+      height: 560px;
+      border-radius: 24px;
+      overflow: hidden;
+      background: radial-gradient(ellipse at center, #0a0520 0%, #050410 70%);
+      border: 1px solid rgba(108,99,255,0.2);
+      box-shadow: 0 0 80px rgba(108,99,255,0.15);
+      cursor: grab;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    #threeContainer:active { cursor: grabbing; }
+
+    /* SCROLL REVEAL */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 3D CARD TILT */
+    .project-card {
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+    .project-card .shine {
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.12) 0%, transparent 65%);
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .project-card:hover .shine { opacity: 1; }
+    .project-card { position: relative; }
+
+    /* SCRAMBLE CURSOR BLINK */
+    .scramble-cursor::after {
+      content: '|';
+      animation: blink 0.7s step-end infinite;
+      color: var(--primary);
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* GLITCH on logo hover */
+    .logo {
+      position: relative;
+      display: inline-block;
+    }
+    .logo:hover { animation: glitch 0.4s steps(2) infinite; }
+    @keyframes glitch {
+      0%   { text-shadow: 2px 0 var(--secondary), -2px 0 var(--primary); }
+      25%  { text-shadow: -2px 0 var(--secondary), 2px 0 var(--primary); }
+      50%  { text-shadow: 2px 2px var(--secondary), -2px -2px var(--primary); }
+      75%  { text-shadow: -2px 2px var(--secondary), 2px -2px var(--primary); }
+      100% { text-shadow: none; }
+    }
   </style>
 </head>
 <body>
+
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
 
 <nav>
   <div class="logo">&lt;Dev /&gt;</div>
@@ -348,9 +458,10 @@
 
 <!-- HERO -->
 <section class="hero" id="about">
+  <canvas id="particleCanvas"></canvas>
   <div class="hero-content">
     <div class="badge">👋 Chào mừng đến với portfolio của tôi</div>
-    <h1>
+    <h1 id="heroTitle" class="scramble-cursor">
       Tôi xây dựng những<br />
       <span class="highlight">trải nghiệm số</span><br />
       tuyệt vời
@@ -380,6 +491,15 @@
   </div>
 </section>
 
+<!-- 3D MODEL -->
+<section id="model3d">
+  <div class="section-title reveal">
+    <h2>3D Universe</h2>
+    <p>Kéo để xoay &middot; Cuộn để zoom &middot; Chuột phải để pan</p>
+  </div>
+  <div id="threeContainer" class="reveal" style="transition-delay:0.2s"></div>
+</section>
+
 <!-- SKILLS -->
 <section class="skills-bg" id="skills">
   <div class="section-title">
@@ -406,7 +526,8 @@
     <p>Một số dự án tôi đã xây dựng gần đây</p>
   </div>
   <div class="projects-grid">
-    <div class="project-card">
+    <div class="project-card reveal">
+      <div class="shine"></div>
       <div class="project-thumb" style="background: linear-gradient(135deg,#1a1a2e,#16213e)">🛒</div>
       <div class="project-body">
         <h3>E-Commerce Platform</h3>
@@ -418,7 +539,8 @@
         </div>
       </div>
     </div>
-    <div class="project-card">
+    <div class="project-card reveal" style="transition-delay:0.15s">
+      <div class="shine"></div>
       <div class="project-thumb" style="background: linear-gradient(135deg,#0d1b2a,#1b263b)">📊</div>
       <div class="project-body">
         <h3>Analytics Dashboard</h3>
@@ -430,7 +552,8 @@
         </div>
       </div>
     </div>
-    <div class="project-card">
+    <div class="project-card reveal" style="transition-delay:0.3s">
+      <div class="shine"></div>
       <div class="project-thumb" style="background: linear-gradient(135deg,#1a0533,#2d1b69)">🤖</div>
       <div class="project-body">
         <h3>AI Chat Assistant</h3>
@@ -469,9 +592,168 @@
 <div class="toast" id="toast">✅ Tin nhắn đã được gửi!</div>
 
 <script>
-  // Counter animation
-  const counters = document.querySelectorAll('.stat-number[data-target]');
-  const observer = new IntersectionObserver(entries => {
+  /* ── 1. CUSTOM CURSOR ── */
+  const dot = document.getElementById('cursorDot');
+  const ring = document.getElementById('cursorRing');
+  let ringX = 0, ringY = 0, mouseX = 0, mouseY = 0;
+
+  document.addEventListener('mousemove', e => {
+    mouseX = e.clientX; mouseY = e.clientY;
+    dot.style.left = mouseX + 'px';
+    dot.style.top  = mouseY + 'px';
+  });
+
+  (function animRing() {
+    ringX += (mouseX - ringX) * 0.12;
+    ringY += (mouseY - ringY) * 0.12;
+    ring.style.left = ringX + 'px';
+    ring.style.top  = ringY + 'px';
+    requestAnimationFrame(animRing);
+  })();
+
+  document.querySelectorAll('a, button, .skill-card, .project-card, input, textarea').forEach(el => {
+    el.addEventListener('mouseenter', () => { dot.classList.add('hovered'); ring.classList.add('hovered'); });
+    el.addEventListener('mouseleave', () => { dot.classList.remove('hovered'); ring.classList.remove('hovered'); });
+  });
+
+  /* ── 2. PARTICLE CANVAS ── */
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [], mouse = { x: -999, y: -999 };
+  const N = 80, LINK_DIST = 140, REPEL_DIST = 100, REPEL_FORCE = 3;
+
+  function resize() {
+    W = canvas.width  = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  canvas.closest('section').addEventListener('mousemove', e => {
+    const r = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - r.left;
+    mouse.y = e.clientY - r.top;
+  });
+  canvas.closest('section').addEventListener('mouseleave', () => { mouse.x = -999; mouse.y = -999; });
+
+  for (let i = 0; i < N; i++) {
+    particles.push({
+      x: Math.random() * (W || 800),
+      y: Math.random() * (H || 600),
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      r: Math.random() * 2 + 1,
+      hue: Math.random() < 0.5 ? 252 : 340
+    });
+  }
+
+  function drawParticles() {
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach(p => {
+      const dx = mouse.x - p.x, dy = mouse.y - p.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < REPEL_DIST && d > 0) {
+        p.vx -= (dx / d) * REPEL_FORCE * (1 - d / REPEL_DIST) * 0.05;
+        p.vy -= (dy / d) * REPEL_FORCE * (1 - d / REPEL_DIST) * 0.05;
+      }
+      p.vx *= 0.98; p.vy *= 0.98;
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue},100%,75%,0.8)`;
+      ctx.fill();
+    });
+
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const a = particles[i], b = particles[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < LINK_DIST) {
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(108,99,255,${(1 - dist / LINK_DIST) * 0.4})`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(drawParticles);
+  }
+  drawParticles();
+
+  /* ── 3. TEXT SCRAMBLE on hero h1 ── */
+  const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*';
+  function scramble(el) {
+    const original = el.innerHTML;
+    const text = el.innerText;
+    let frame = 0;
+    const total = text.length * 3;
+    el.classList.add('scramble-cursor');
+
+    const iv = setInterval(() => {
+      let out = '';
+      for (let i = 0; i < text.length; i++) {
+        if (text[i] === '\n' || text[i] === ' ') { out += text[i]; continue; }
+        if (frame > i * 3 + 6) { out += text[i]; }
+        else { out += CHARS[Math.floor(Math.random() * CHARS.length)]; }
+      }
+      el.innerText = out;
+      frame++;
+      if (frame > total + 10) {
+        clearInterval(iv);
+        el.innerHTML = original;
+        el.classList.remove('scramble-cursor');
+      }
+    }, 30);
+  }
+
+  window.addEventListener('load', () => setTimeout(() => scramble(document.getElementById('heroTitle')), 400));
+
+  /* ── 4. MAGNETIC BUTTONS ── */
+  document.querySelectorAll('.btn').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+      const r = btn.getBoundingClientRect();
+      const x = e.clientX - r.left - r.width  / 2;
+      const y = e.clientY - r.top  - r.height / 2;
+      btn.style.transform = `translate(${x * 0.25}px, ${y * 0.25}px) translateY(-3px)`;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = '';
+    });
+  });
+
+  /* ── 5. 3D TILT + SHINE on project cards ── */
+  document.querySelectorAll('.project-card').forEach(card => {
+    const shine = card.querySelector('.shine');
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      const cx = r.width / 2, cy = r.height / 2;
+      const rotX = ((y - cy) / cy) * -12;
+      const rotY = ((x - cx) / cx) *  12;
+      card.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(1.03)`;
+      card.style.boxShadow = `${-rotY * 1.5}px ${rotX * 1.5}px 40px rgba(108,99,255,0.3)`;
+      shine.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.14) 0%, transparent 60%)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = '';
+      card.style.boxShadow = '';
+    });
+  });
+
+  /* ── 6. SCROLL REVEAL ── */
+  const revealObs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+  /* ── 7. COUNTER ANIMATION ── */
+  const counterObs = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
       const el = entry.target;
@@ -483,12 +765,12 @@
         if (current >= target) { el.textContent = target + '+'; clearInterval(timer); }
         else el.textContent = Math.floor(current) + '+';
       }, 20);
-      observer.unobserve(el);
+      counterObs.unobserve(el);
     });
   }, { threshold: 0.5 });
-  counters.forEach(c => observer.observe(c));
+  document.querySelectorAll('.stat-number[data-target]').forEach(c => counterObs.observe(c));
 
-  // Contact form
+  /* ── 8. CONTACT FORM ── */
   document.getElementById('contactForm').addEventListener('submit', e => {
     e.preventDefault();
     const toast = document.getElementById('toast');
@@ -497,16 +779,148 @@
     e.target.reset();
   });
 
-  // Smooth active nav
+  /* ── 9. ACTIVE NAV ── */
   const sections = document.querySelectorAll('section[id]');
   const navLinks = document.querySelectorAll('nav a');
   window.addEventListener('scroll', () => {
     let current = '';
     sections.forEach(s => { if (window.scrollY >= s.offsetTop - 120) current = s.id; });
-    navLinks.forEach(a => {
-      a.style.color = a.getAttribute('href') === '#' + current ? '#6c63ff' : '';
-    });
+    navLinks.forEach(a => { a.style.color = a.getAttribute('href') === '#' + current ? '#6c63ff' : ''; });
   });
 </script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+const container = document.getElementById('threeContainer');
+const W = container.clientWidth, H = container.clientHeight;
+
+/* RENDERER */
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+container.appendChild(renderer.domElement);
+
+/* SCENE + CAMERA */
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 1000);
+camera.position.set(0, 0, 5);
+
+/* CONTROLS */
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 1.5;
+controls.minDistance = 2.5;
+controls.maxDistance = 10;
+
+/* BLOOM POST-PROCESSING */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), 0.8, 0.5, 0.2);
+composer.addPass(bloom);
+
+/* MAIN OBJECT — TorusKnot with iridescent physical material */
+const knotGeo = new THREE.TorusKnotGeometry(1, 0.32, 300, 48, 2, 5);
+const knotMat = new THREE.MeshPhysicalMaterial({
+  color: 0x7060ff,
+  metalness: 0.85,
+  roughness: 0.08,
+  iridescence: 1.0,
+  iridescenceIOR: 2.2,
+  iridescenceThicknessRange: [100, 600],
+  clearcoat: 1.0,
+  clearcoatRoughness: 0.05,
+  reflectivity: 1.0,
+  envMapIntensity: 1.5,
+});
+const knot = new THREE.Mesh(knotGeo, knotMat);
+scene.add(knot);
+
+/* ORBITING COLORED LIGHTS */
+const lights = [
+  { color: 0x6c63ff, r: 3.5, speed: 0.8,  y: 1.5  },
+  { color: 0xff6584, r: 3.0, speed: -1.1, y: -1.0 },
+  { color: 0x00e5ff, r: 4.0, speed: 0.6,  y: 0    },
+];
+const pointLights = lights.map(({ color, r, y }) => {
+  const pl = new THREE.PointLight(color, 60, 12);
+  pl.position.set(r, y, 0);
+  scene.add(pl);
+  return pl;
+});
+
+/* AMBIENT + DIRECTIONAL */
+scene.add(new THREE.AmbientLight(0x111122, 2));
+const dir = new THREE.DirectionalLight(0xffffff, 1.5);
+dir.position.set(5, 10, 5);
+scene.add(dir);
+
+/* STAR PARTICLES */
+const starCount = 6000;
+const starPos = new Float32Array(starCount * 3);
+for (let i = 0; i < starCount * 3; i++) starPos[i] = (Math.random() - 0.5) * 60;
+const starGeo = new THREE.BufferGeometry();
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.06, sizeAttenuation: true });
+scene.add(new THREE.Points(starGeo, starMat));
+
+/* FLOATING ENERGY RINGS */
+const ringGeo = new THREE.TorusGeometry(1.8, 0.008, 2, 120);
+const rings = [0x6c63ff, 0xff6584, 0x00e5ff].map((color, i) => {
+  const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5 }));
+  m.rotation.x = Math.PI / 2 + i * Math.PI / 3;
+  m.rotation.y = i * Math.PI / 3;
+  scene.add(m);
+  return m;
+});
+
+/* MOUSE PARALLAX */
+let mx = 0, my = 0;
+container.addEventListener('mousemove', e => {
+  const r = container.getBoundingClientRect();
+  mx = (e.clientX - r.left) / r.width  * 2 - 1;
+  my = (e.clientY - r.top)  / r.height * 2 - 1;
+});
+
+/* RESIZE */
+window.addEventListener('resize', () => {
+  const nw = container.clientWidth, nh = container.clientHeight;
+  camera.aspect = nw / nh;
+  camera.updateProjectionMatrix();
+  renderer.setSize(nw, nh);
+  composer.setSize(nw, nh);
+});
+
+/* ANIMATE */
+const clock = new THREE.Clock();
+(function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  knot.rotation.x = t * 0.15 + my * 0.3;
+
+  lights.forEach((cfg, i) => {
+    const a = t * cfg.speed;
+    pointLights[i].position.set(Math.cos(a) * cfg.r, cfg.y + Math.sin(t * 0.4) * 0.5, Math.sin(a) * cfg.r);
+  });
+
+  rings.forEach((ring, i) => {
+    ring.rotation.z = t * (0.3 + i * 0.15);
+    ring.rotation.x = Math.PI / 2 + i * Math.PI / 3 + t * 0.1;
+  });
+
+  controls.update();
+  composer.render();
+})();
+</script>
+
 </body>
 </html>
